@@ -29,7 +29,7 @@ config.read('/etc/gaps/gaps.conf')
 ## Open connection to Syslog ##
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
 
-filename = config.get('common', 'path_password_file')
+filename = config.get('common', 'path_pwdlastset_file')
 dict_mail_pwdlastset={}
 if os.path.isfile(filename):
     dict_mail_pwdlastset = json.loads(open(filename,'r').read())
@@ -109,12 +109,12 @@ def run():
 
         if str(pwdlastset) != dict_mail_pwdlastset.get(mail,''):
 
-            # Update if password different in dict mail password
+            # Update if password different in dict mail pwdlastset
             password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
             password = str(password[passwordattr])
             update_password(mail, password, pwdlastset)
 
-    #delete user found in dict mail password but not found in samba
+    #delete user found in dict mail pwdlastset but not found in samba
     listdelete = []
     for user in dict_mail_pwdlastset :
         if not user in allmail:
