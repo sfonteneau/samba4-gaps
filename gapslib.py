@@ -30,9 +30,9 @@ config.read('/etc/gaps/gaps.conf')
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
 
 filename = config.get('common', 'path_password_file')
-dict_mail_password={}
+dict_mail_pwdlastset={}
 if os.path.isfile(filename):
-    dict_mail_password = json.loads(open(filename,'r').read())
+    dict_mail_pwdlastset = json.loads(open(filename,'r').read())
 
 ## Load Google Configuration ##
 with open( config.get('google', 'service_json')) as data_file:
@@ -53,7 +53,7 @@ def createDirectoryService(user_email):
   return build('admin', 'directory_v1', http=http)
 
 
-def update_password(mail, pwd):
+def update_password(mail, pwd, pwdlastset):
     # Create a new service object
     service = createDirectoryService(config.get('google', 'admin_email'))
 
@@ -69,8 +69,8 @@ def update_password(mail, pwd):
         #Change password
         service.users().update(userKey = mail, body=user).execute()
         syslog.syslog(syslog.LOG_WARNING, '[NOTICE] Updated password for %s' % mail)
-        dict_mail_password[str(mail)]=str(pwd)
-        open(filename,'w').write(json.dumps(dict_mail_password))
+        dict_mail_pwdlastset[str(mail)]=str(pwdlastset)
+        open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
     except Exception as e:
         syslog.syslog(syslog.LOG_WARNING, '[ERROR] %s : %s' % (mail,str(e)))
     finally:
@@ -95,35 +95,36 @@ def run():
     allmail = {}
 
     # Search all users
-    for user in samdb_loc.search(base=param_samba['adbase'], expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName"]):
+    for user in samdb_loc.search(base=param_samba['adbase'], expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName","pwdLastSet"]):
         mail = str(user["mail"])
 
         #replace mail if replace_domain in config
         if config.get('common', 'replace_domain'):
             mail = mail.split('@')[0] + '@' + config.get('common', 'domain')
 
-        #give password
-        password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
-        password = str(password[passwordattr])
+        pwdlastset = user.get('pwdLastSet','')
 
         #add mail in all mail
         allmail[mail] = None
 
-        # Update if password different in dict mail password
-        if str(password) != dict_mail_password.get(mail,''):
-            update_password(mail, password)
+        if str(pwdlastset) != dict_mail_pwdlastset.get(mail,''):
+
+            # Update if password different in dict mail password
+            password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
+            password = str(password[passwordattr])
+            update_password(mail, password, pwdlastset)
 
     #delete user found in dict mail password but not found in samba
     listdelete = []
-    for user in dict_mail_password :
+    for user in dict_mail_pwdlastset :
         if not user in allmail:
             listdelete.append(user)
 
     for user in listdelete:
-        del dict_mail_password[user]
+        del dict_mail_pwdlastset[user]
 
     #write new json dict mail password
-    open(filename,'w').write(json.dumps(dict_mail_password))
+    open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
 
 
 
