@@ -123,9 +123,7 @@ def run():
         del dict_mail_password[user]
 
     #write new json dict mail password
-    with open(filename, "w") as fOut:
-        open(filename,'w').write(json.dumps(dict_mail_password))
-
+    open(filename,'w').write(json.dumps(dict_mail_password))
 
 
 
