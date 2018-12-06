@@ -124,7 +124,8 @@ def run():
         del dict_mail_pwdlastset[user]
 
     #write new json dict mail password
-    open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
+    if listdelete:
+        open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
 
 
 
