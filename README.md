@@ -1,9 +1,8 @@
 Google Apps Password Sync for Samba4
 ===========
 
-
 Reads from your Samba4 AD and updates passwords in Google Apps 
-Note that this solution requires you to enable "password hash userPassword schemes = CryptSHA256" in smb.conf if you use CryptSHA256 or CryptSHA512
+Note that this solution requires you to enable "password hash userPassword schemes = CryptSHA256 CryptSHA512" in smb.conf
 
 Python Dependencies
 ===========

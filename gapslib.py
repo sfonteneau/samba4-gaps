@@ -55,8 +55,6 @@ def createDirectoryService(user_email):
 
 def update_password(mail, pwd):
     # Create a new service object
-    print mail
-    print pwd
     service = createDirectoryService(config.get('google', 'admin_email'))
 
     try:
@@ -66,15 +64,15 @@ def update_password(mail, pwd):
         return 0
 
     user['hashFunction'] = 'crypt'
-    user['password'] = password
-
+    user['password'] = pwd.replace('{CRYPT}','')
     try:
+        #Change password
         service.users().update(userKey = mail, body=user).execute()
         syslog.syslog(syslog.LOG_WARNING, '[NOTICE] Updated password for %s' % mail)
-        dict_mail_password[str(user["mail"])]=str(password[passwordattr])
+        dict_mail_password[str(mail)]=str(pwd)
         open(filename,'w').write(json.dumps(dict_mail_password))
-    except:
-        syslog.syslog(syslog.LOG_WARNING, '[ERROR] Could not update password for %s ' % mail)
+    except Exception as e:
+        syslog.syslog(syslog.LOG_WARNING, '[ERROR] %s : %s' % (mail,str(e)))
     finally:
         service = None
 
@@ -91,25 +89,43 @@ def run():
     creds = Credentials()
     creds.guess(lp)
     samdb_loc = SamDB(url=param_samba['pathsamdb'], session_info=system_session(),credentials=creds, lp=lp)
-    filename ='dict_mail_password.json'
     testpawd = GetPasswordCommand()
     testpawd.lp = lp
-
     passwordattr = config.get('common', 'attr_password')
+    allmail = {}
+
+    # Search all users
     for user in samdb_loc.search(base=param_samba['adbase'], expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName"]):
         mail = str(user["mail"])
+
+        #replace mail if replace_domain in config
         if config.get('common', 'replace_domain'):
             mail = mail.split('@')[0] + '@' + config.get('common', 'domain')
 
+        #give password
         password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
+        password = str(password[passwordattr])
 
-        if passwordattr == 'unicodePwd':
-            password = '$3$$' + str(password[passwordattr]).encode('hex')
-        else:
-            password = str(password[passwordattr])
+        #add mail in all mail
+        allmail[mail] = None
 
+        # Update if password different in dict mail password
         if str(password) != dict_mail_password.get(mail,''):
             update_password(mail, password)
+
+    #delete user found in dict mail password but not found in samba
+    listdelete = []
+    for user in dict_mail_password :
+        if not user in allmail:
+            listdelete.append(user)
+
+    for user in listdelete:
+        del dict_mail_password[user]
+
+    #write new json dict mail password
+    with open(filename, "w") as fOut:
+        open(filename,'w').write(json.dumps(dict_mail_password))
+
 
 
 
