@@ -26,7 +26,6 @@ from oauth2client.client import SignedJwtAssertionCredentials
 config = SafeConfigParser()
 config.read('/etc/gaps/gaps.conf')
 
-
 ## Open connection to Syslog ##
 syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
 
@@ -56,6 +55,8 @@ def createDirectoryService(user_email):
 
 def update_password(mail, pwd):
     # Create a new service object
+    print mail
+    print pwd
     service = createDirectoryService(config.get('google', 'admin_email'))
 
     try:
@@ -64,8 +65,7 @@ def update_password(mail, pwd):
         syslog.syslog(syslog.LOG_WARNING, '[WARNING] Account %s not found' % mail)
         return 0
 
-    #TODO VERIFICATION IF IS OK
-    user['hashFunction'] = 'SHA-2'
+    user['hashFunction'] = 'crypt'
     user['password'] = password
 
     try:
@@ -95,17 +95,21 @@ def run():
     testpawd = GetPasswordCommand()
     testpawd.lp = lp
 
-    passwordattr = 'virtualCryptSHA256'
+    passwordattr = config.get('common', 'attr_password')
     for user in samdb_loc.search(base=param_samba['adbase'], expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName"]):
-
         mail = str(user["mail"])
         if config.get('common', 'replace_domain'):
             mail = mail.split('@')[0] + '@' + config.get('common', 'domain')
 
         password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
-        if passwordattr in password:
-            if str(password[passwordattr]) != dict_mail_password.get(mail,''):
-                update_password(mail, str(password[passwordattr]))
+
+        if passwordattr == 'unicodePwd':
+            password = '$3$$' + str(password[passwordattr]).encode('hex')
+        else:
+            password = str(password[passwordattr])
+
+        if str(password) != dict_mail_password.get(mail,''):
+            update_password(mail, password)
 
 
 
