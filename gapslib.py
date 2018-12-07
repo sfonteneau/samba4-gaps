@@ -111,6 +111,8 @@ def run():
 
             # Update if password different in dict mail pwdlastset
             password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=True)
+            if not passwordattr in password:
+                continue
             password = str(password[passwordattr])
             update_password(mail, password, pwdlastset)
 
