@@ -99,7 +99,7 @@ def run():
         mail = str(user["mail"])
 
         #replace mail if replace_domain in config
-        if config.get('common', 'replace_domain'):
+        if config.getboolean('common', 'replace_domain'):
             mail = mail.split('@')[0] + '@' + config.get('common', 'domain')
 
         pwdlastset = user.get('pwdLastSet','')
