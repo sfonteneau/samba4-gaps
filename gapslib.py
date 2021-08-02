@@ -20,11 +20,14 @@ from samba.param import LoadParm
 from samba.samdb import SamDB
 from samba.netcmd.user import GetPasswordCommand
 
-from ConfigParser import SafeConfigParser
-from oauth2client.client import SignedJwtAssertionCredentials
+
+import configparser
+from google.oauth2 import service_account
+import googleapiclient.discovery
+from googleapiclient.discovery import build
 
 ## Get confgiruation
-config = SafeConfigParser()
+config = configparser.ConfigParser()
 config.read('/etc/gaps/gaps.conf')
 
 ## Open connection to Syslog ##
@@ -39,24 +42,28 @@ if os.path.isfile(filename):
 with open( config.get('google', 'service_json')) as data_file:
   gaConfig = json.load(data_file)
 
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.group',
+        'https://www.googleapis.com/auth/admin.directory.user']
+
 ## Load Google Service ##
-def createDirectoryService(user_email):
-  credentials = SignedJwtAssertionCredentials(
-        gaConfig['client_email'],
-        gaConfig['private_key'],
-        scope='https://www.googleapis.com/auth/admin.directory.user',
-        sub=user_email
-  )
+def create_directory_service(user_email):
+    credentials = service_account.Credentials.from_service_account_file(config.get('google', 'service_json'), scopes=SCOPES)
 
-  http = httplib2.Http()
-  http = credentials.authorize(http)
+    if credentials is None:
+        print(" ---- BAD CREDENTIALS  ---- ")
 
-  return build('admin', 'directory_v1', http=http)
+    delegated_credentials = credentials.with_subject(config.get('google', 'admin_email'))
+
+    """
+        build('api_name', 'api_version', ...)
+        https://developers.google.com/api-client-library/python/apis/
+    """
+    return build('admin', 'directory_v1', credentials=delegated_credentials)
 
 
 def update_password(mail, pwd, pwdlastset):
     # Create a new service object
-    service = createDirectoryService(config.get('google', 'admin_email'))
+    service = create_directory_service(config.get('google', 'admin_email'))
 
     try:
         user = service.users().get(userKey = mail).execute()
@@ -64,11 +71,13 @@ def update_password(mail, pwd, pwdlastset):
         syslog.syslog(syslog.LOG_WARNING, '[WARNING] Account %s not found' % mail)
         return 0
 
-    user['hashFunction'] = 'crypt'
-    user['password'] = pwd.replace('{CRYPT}','')
     try:
         #Change password
-        service.users().update(userKey = mail, body=user).execute()
+        userbody = { 'hashFunction': 'crypt','password': pwd.replace('{CRYPT}','')}
+        request = service.users().update(userKey = mail, body = userbody)
+        response = request.execute()
+
+
         syslog.syslog(syslog.LOG_WARNING, '[NOTICE] Updated password for %s' % mail)
         dict_mail_pwdlastset[str(mail)]=str(pwdlastset)
         open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
