@@ -16,7 +16,7 @@ Install notes
 8. cd /opt/samba4-gaps
 9. pip3 install -r requirements.txt
 10. mkdir /etc/gaps
-11. cp -f gaps.conf /etc/gaps/gaps.conf
+11. cp -f gaps.conf.template /etc/gaps/gaps.conf
 12. Configure /etc/gaps/gaps.conf
 13. Create a project in Google API Console and add Admin SDK permission (read/write)
 14. Create a JSON Config for your project in Google Developer Console
