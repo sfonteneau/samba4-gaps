@@ -20,7 +20,7 @@ Install notes
 12. cp -f service.json.template /etc/gaps/service.json
 13. Configure /etc/gaps/gaps.conf
 14. Create a project in Google API Console and add Admin SDK permission (read/write)
-15. Create a JSON Config for your project in Google Developer Console
+15. Create a JSON Config for your project in Google Developer Console (Service accounts, addkey, json)
 16. Install the JSON config to your samba machine in /etc/gaps/service.json 
 17. cd /opt/samba4-gaps
 18. python3 gaps.py
