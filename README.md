@@ -25,6 +25,8 @@ Install notes
 17. cd /opt/samba4-gaps
 18. python3 gaps.py
 
+log visible in syslog
+
 * If you are having issues with Google Permissions - you might need to add domain-wide authority to your service
   Delegate domain-wide authority to your service account https://developers.google.com/drive/web/delegation#delegate_domain-wide_authority_to_your_service_account
 
