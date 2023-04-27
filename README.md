@@ -4,49 +4,25 @@ Google Apps Password Sync for Samba4
 Reads from your Samba4 AD and updates passwords in Google Apps 
 Note that this solution requires you to enable "password hash userPassword schemes = CryptSHA256 CryptSHA512" in smb.conf
 
-Python Dependencies
-===========
-
-- daemon
-- gdata
-- hashlib
-- syslog
-- samba
-- google api python client
-
-Google API must be installed with pip:
-pip install --upgrade google-api-python-client
-
-
 Install notes
 ===========
+1. add params "password hash userPassword schemes = CryptSHA256 CryptSHA512" in smb.conf
+2. restart samba
+3. Change the password of a user to synchronize (changing the password will be mandatory for all users in order to feed the new hashes)
+4. apt-get install python3-pip git
+5. git clone https://github.com/sfonteneau/samba4-gaps.git
+6. mv samba4-gaps /opt/samba4-gaps
+7. cd /opt/samba4-gaps
+8. pip3 install -r requirements.txt
+9. mkdir /etc/gaps
+10. cp -f gaps.conf /etc/gaps/gaps.conf
+11. Configure /etc/gaps/gaps.conf
+12. Create a project in Google API Console and add Admin SDK permission (read/write)
+13. Create a JSON Config for your project in Google Developer Console
+14. Install the JSON config to your samba machine in /etc/gaps/service.json 
+15. cd /opt/samba4-gaps
+16. python3 gaps.py
 
-1. Install python-pip and python-openssl
-2. Create a project in Google API Console and add Admin SDK permission (read/write)
-3. Create a JSON Config for your project in Google Developer Console
-4. Install the JSON config to your samba machine in /etc/gaps/service.json (create the folder if missing)
-5. Copy gaps.py and gapslib.py to desired locations.
-6. Copy gaps.conf to /etc/gaps/gaps.conf and configure it
-7. Run gaps.py in cron or at startup from rc.local, or both (if you wan't to schedule a restart). Change your settings in gapslib.py to fit your setup.
-8. Change syslog to desired local and add it to your syslog config for custom log file
-9. Start the daemon and watch log file for updates
-
-
-* If you are having trouble loading samba python modules please copy or symlink files and dirs in "/usr/local/samba/lib/python2.7/site-packages/" to "/usr/lib/python2.7/"
 * If you are having issues with Google Permissions - you might need to add domain-wide authority to your service
   Delegate domain-wide authority to your service account https://developers.google.com/drive/web/delegation#delegate_domain-wide_authority_to_your_service_account
 
-Debug
-===========
-If the daemon don't start change /dev/null to /dev/tty in gaps.py and watch for error messages.
-
-
-Migration from old Google Provision API to new Google Admin SDK
-===========
-1. Install python-pip
-2. Create a project in Google Developer Console and ad Admin SDK permission
-3. Create a JSON config for you project in Google Developer Console
-4. Download the json config from the Google Developer Console to your samba machine
-5. pip install --upgrade google-api-python-client
-6. Copy your settings from your local version of gapslib.py to the new config file /etc/gaps/gaps.conf (create the fold if missing)
-7. Replace gapslib.py with the new one
