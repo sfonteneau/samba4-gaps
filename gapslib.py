@@ -9,6 +9,7 @@ import json
 import httplib2
 import ldb
 import os
+import optparse
 
 from Crypto import Random
 from apiclient import errors
@@ -19,6 +20,7 @@ from samba.credentials import Credentials
 from samba.param import LoadParm
 from samba.samdb import SamDB
 from samba.netcmd.user import GetPasswordCommand
+import samba.getopt as options
 
 
 import configparser
@@ -88,24 +90,41 @@ def update_password(mail, pwd, pwdlastset):
 
 def run():
 
-    param_samba = {
-    'basedn' : config.get('samba', 'path'),
-    'pathsamdb':'%s/sam.ldb' % config.get('samba', 'private'),
-    'adbase': config.get('samba', 'base')
-    }
+
+    if config.has_section('samba') and config.has_option('samba', 'smbconf'):
+        smbconf = config.get('samba', 'smbconf')
+    else:
+        smbconf = "/etc/samba/smb.conf"
+
+    if not smbconf:
+        smbconf = "/etc/samba/smb.conf"
+
+    parser = optparse.OptionParser(smbconf)
+    sambaopts = options.SambaOptions(parser)
 
     # SAMDB
-    lp = LoadParm()
+    lp = sambaopts.get_loadparm()
+
     creds = Credentials()
     creds.guess(lp)
-    samdb_loc = SamDB(url=param_samba['pathsamdb'], session_info=system_session(),credentials=creds, lp=lp)
+
+    samdb_loc = SamDB(session_info=system_session(),credentials=creds, lp=lp)
+
+    if config.has_section('samba') and config.has_option('samba', 'base'):
+        adbase = config.get('samba', 'base')
+    else:
+        adbase = samdb_loc.get_default_basedn()
+    if not adbase:
+        adbase = "/etc/samba/smb.conf"
+
+
     testpawd = GetPasswordCommand()
     testpawd.lp = lp
     passwordattr = config.get('common', 'attr_password')
     allmail = {}
 
     # Search all users
-    for user in samdb_loc.search(base=param_samba['adbase'], expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName","pwdLastSet"]):
+    for user in samdb_loc.search(base=adbase, expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName","pwdLastSet"]):
         mail = str(user["mail"])
 
         #replace mail if replace_domain in config
@@ -122,7 +141,7 @@ def run():
             Random.atfork()
 
             # Update if password different in dict mail pwdlastset
-            password = testpawd.get_account_attributes(samdb_loc,None,param_samba['basedn'],filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=False)
+            password = testpawd.get_account_attributes(samdb_loc,None,adbase,filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=False)
             if not passwordattr in password:
                 continue
             password = str(password[passwordattr])

@@ -10,6 +10,4 @@ admin_email = adminuser@yourdomain.com
 service_json = /etc/gaps/service.json
 
 [samba]
-private = /usr/local/samba/private
-path = DC=YOURDOMAIN,DC=COM
-base = ou=sample,dc=yourdomain,dc=com
+basedn = 
