@@ -3,7 +3,7 @@ domain = yourdomain.com
 replace_domain = false
 path_pwdlastset_file=/root/dict_mail_pwdlastset.json
 attr_password=virtualCryptSHA256
-#attr_password=virtualCryptSHA512
+
 
 [google]
 admin_email = adminuser@yourdomain.com
