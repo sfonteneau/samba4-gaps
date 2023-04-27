@@ -17,12 +17,13 @@ Install notes
 9. pip3 install -r requirements.txt
 10. mkdir /etc/gaps
 11. cp -f gaps.conf.template /etc/gaps/gaps.conf
-12. Configure /etc/gaps/gaps.conf
-13. Create a project in Google API Console and add Admin SDK permission (read/write)
-14. Create a JSON Config for your project in Google Developer Console
-15. Install the JSON config to your samba machine in /etc/gaps/service.json 
-16. cd /opt/samba4-gaps
-17. python3 gaps.py
+12. cp -f service.json.template /etc/gaps/service.json
+13. Configure /etc/gaps/gaps.conf
+14. Create a project in Google API Console and add Admin SDK permission (read/write)
+15. Create a JSON Config for your project in Google Developer Console
+16. Install the JSON config to your samba machine in /etc/gaps/service.json 
+17. cd /opt/samba4-gaps
+18. python3 gaps.py
 
 * If you are having issues with Google Permissions - you might need to add domain-wide authority to your service
   Delegate domain-wide authority to your service account https://developers.google.com/drive/web/delegation#delegate_domain-wide_authority_to_your_service_account
