@@ -1,15 +1,13 @@
 #!/usr/bin/env python
-import binascii
-import quopri
 import sys
-import textwrap
 import hashlib
 import syslog
 import json
-import httplib2
 import ldb
 import os
 import optparse
+import hashlib
+import pickle
 
 from Crypto import Random
 from apiclient import errors
@@ -28,17 +26,26 @@ from google.oauth2 import service_account
 import googleapiclient.discovery
 from googleapiclient.discovery import build
 
+from peewee import SqliteDatabase,CharField,Model,TextField
+
 ## Get confgiruation
 config = configparser.ConfigParser()
 config.read('/etc/gaps/gaps.conf')
 
-## Open connection to Syslog ##
-syslog.openlog(logoption=syslog.LOG_PID, facility=syslog.LOG_LOCAL3)
+db = SqliteDatabase(config.get('common', 'dbpath'))
 
-filename = config.get('common', 'path_pwdlastset_file')
-dict_mail_pwdlastset={}
-if os.path.isfile(filename):
-    dict_mail_pwdlastset = json.loads(open(filename,'r').read())
+def hash_for_data(data):
+    return hashlib.sha1(pickle.dumps(data)).hexdigest()
+
+class LastSend(Model):
+    mail       = CharField(primary_key=True, index=True)
+    sha1hashnt = CharField()
+
+    class Meta:
+        database = db
+
+if not LastSend.table_exists():
+    db.create_tables([LastSend])
 
 ## Load Google Configuration ##
 with open( config.get('google', 'service_json')) as data_file:
@@ -63,7 +70,7 @@ def create_directory_service(user_email):
     return build('admin', 'directory_v1', credentials=delegated_credentials)
 
 
-def update_password(mail, pwd, pwdlastset):
+def update_password(mail, pwd, sha1hashnt):
     # Create a new service object
     service = create_directory_service(config.get('google', 'admin_email'))
 
@@ -79,10 +86,9 @@ def update_password(mail, pwd, pwdlastset):
         request = service.users().update(userKey = mail, body = userbody)
         response = request.execute()
 
-
+        LastSend.insert(mail=mail,sha1hashnt = sha1hashnt).on_conflict_replace().execute()
         syslog.syslog(syslog.LOG_WARNING, '[NOTICE] Updated password for %s' % mail)
-        dict_mail_pwdlastset[str(mail)]=str(pwdlastset)
-        open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
+
     except Exception as e:
         syslog.syslog(syslog.LOG_WARNING, '[ERROR] %s : %s' % (mail,str(e)))
     finally:
@@ -124,41 +130,29 @@ def run():
     allmail = {}
 
     # Search all users
-    for user in samdb_loc.search(base=adbase, expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName","pwdLastSet"]):
+    for user in samdb_loc.search(base=adbase, expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName"]):
         mail = str(user["mail"])
+        password = testpawd.get_account_attributes(samdb_loc,None,adbase,filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=False)
+        if not passwordattr in password:
+            continue
+        password = str(password[passwordattr])
+        shapassword = hash_for_data(password)
+        Random.atfork()
 
         #replace mail if replace_domain in config
         if config.getboolean('common', 'replace_domain'):
             mail = mail.split('@')[0] + '@' + config.get('common', 'domain')
 
-        pwdlastset = user.get('pwdLastSet','')
 
         #add mail in all mail
         allmail[mail] = None
 
-        if str(pwdlastset) != dict_mail_pwdlastset.get(mail,''):
-
-            Random.atfork()
+        last_data = LastSend.select(LastSend.sha1hashnt).where(LastSend.mail==mail).first()
+        if (not last_data) or shapassword != last_data.sha1hashnt:
 
             # Update if password different in dict mail pwdlastset
-            password = testpawd.get_account_attributes(samdb_loc,None,adbase,filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=False)
-            if not passwordattr in password:
-                continue
-            password = str(password[passwordattr])
-            update_password(mail, password, pwdlastset)
+            update_password(mail, password,shapassword)
 
-    #delete user found in dict mail pwdlastset but not found in samba
-    listdelete = []
-    for user in dict_mail_pwdlastset :
-        if not user in allmail:
-            listdelete.append(user)
-
-    for user in listdelete:
-        del dict_mail_pwdlastset[user]
-
-    #write new json dict mail password
-    if listdelete:
-        open(filename,'w').write(json.dumps(dict_mail_pwdlastset))
-
-
-
+    for user in LastSend.select(LastSend.mail):
+        if not user.mail in allmail:
+            LastSend.delete().where(LastSend.mail==user.mail).execute()

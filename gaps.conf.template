@@ -1,7 +1,7 @@
 [common]
 domain = yourdomain.com
 replace_domain = false
-path_pwdlastset_file=/root/dict_mail_pwdlastset.json
+dbpath=/opt/samba4-gaps/last_send.db
 attr_password=virtualCryptSHA256
 
 
