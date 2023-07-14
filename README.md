@@ -9,7 +9,7 @@ Install notes
 1. add params "password hash userPassword schemes = CryptSHA256 CryptSHA512" in smb.conf
 2. restart samba
 3. Change the password of a user to synchronize (changing the password will be mandatory for all users in order to feed the new hashes)
-4. apt-get install python3-googleapi python3-pycryptodome python3-peewee -y
+4. apt-get install git python3-googleapi python3-pycryptodome python3-peewee -y
 5. cd /tmp
 6. git clone https://github.com/sfonteneau/samba4-gaps.git
 7. mv samba4-gaps /opt/samba4-gaps
