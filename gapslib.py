@@ -9,7 +9,11 @@ import optparse
 import hashlib
 import pickle
 
-from Crypto import Random
+try:
+    from Cryptodome import Random
+except:
+    from Crypto import Random
+    
 from apiclient import errors
 from apiclient.discovery import build
 
