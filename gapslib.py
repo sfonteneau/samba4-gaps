@@ -11,7 +11,7 @@ import pickle
 
 try:
     from Cryptodome import Random
-except:
+except ImportError:
     from Crypto import Random
     
 from apiclient import errors
@@ -23,7 +23,7 @@ from samba.param import LoadParm
 from samba.samdb import SamDB
 try:
     from samba.netcmd.user.readpasswords.common import GetPasswordCommand
-except:
+except ImportError:
     from samba.netcmd.user import GetPasswordCommand
 import samba.getopt as options
 
