@@ -21,7 +21,10 @@ from samba.auth import system_session
 from samba.credentials import Credentials
 from samba.param import LoadParm
 from samba.samdb import SamDB
-from samba.netcmd.user import GetPasswordCommand
+try:
+    from samba.netcmd.user.readpasswords.common import GetPasswordCommand
+except:
+    from samba.netcmd.user import GetPasswordCommand
 import samba.getopt as options
 
 
