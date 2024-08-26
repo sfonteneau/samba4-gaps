@@ -10,4 +10,5 @@ admin_email = adminuser@yourdomain.com
 service_json = /etc/gaps/service.json
 
 [samba]
-basedn = 
+base = CN=Users,DC=something,DC=domain,DC=com
+group = CN=testgroup,CN=Users,DC=something,DC=domain,DC=com
