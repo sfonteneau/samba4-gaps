@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 import sys
 import hashlib
-import syslog
 import json
 import ldb
 import os
 import optparse
 import hashlib
 import pickle
+import logging
+import datetime
+import json
+
+logger = logging.getLogger()
 
 try:
     from Cryptodome import Random
@@ -38,6 +42,10 @@ from peewee import SqliteDatabase,CharField,Model,TextField
 ## Get confgiruation
 config = configparser.ConfigParser()
 config.read('/etc/gaps/gaps.conf')
+
+logfile = config.get('common', 'logfile')
+fhandler = logging.FileHandler(logfile)
+logger.addHandler(fhandler)
 
 db = SqliteDatabase(config.get('common', 'dbpath'))
 
@@ -86,7 +94,7 @@ def update_password(mail, pwd, sha1hashnt):
     try:
         user = service.users().get(userKey = mail).execute()
     except:
-        syslog.syslog(syslog.LOG_WARNING, '[WARNING] Account %s not found' % mail)
+        logger.warning(json.dumps({'status':"warning",'msg':'Account not found','timestamp': str(datetime.datetime.utcnow()),'mail':mail}))
         return 0
 
     try:
@@ -96,10 +104,9 @@ def update_password(mail, pwd, sha1hashnt):
         response = request.execute()
 
         LastSend.insert(mail=mail,sha1hashnt = sha1hashnt).on_conflict_replace().execute()
-        syslog.syslog(syslog.LOG_WARNING, '[NOTICE] Updated password for %s' % mail)
-
+        logger.info(json.dumps({'status':"ok",'msg':'updated password','timestamp': str(datetime.datetime.utcnow()),'mail':mail}))
     except Exception as e:
-        syslog.syslog(syslog.LOG_WARNING, '[ERROR] %s : %s' % (mail,str(e)))
+        logger.error(json.dumps({'status':"error",'msg':str(e),'timestamp': str(datetime.datetime.utcnow()),'mail':mail}))
     finally:
         service = None
 

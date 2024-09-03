@@ -2,7 +2,7 @@
 domain = yourdomain.com
 replace_domain = false
 dbpath=/opt/samba4-gaps/last_send.db
-
+logfile = /var/log/samba4-gaps.log
 
 [google]
 admin_email = adminuser@yourdomain.com

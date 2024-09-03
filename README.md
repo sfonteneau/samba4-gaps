@@ -28,7 +28,7 @@ If you are not under debian or if you do not have the packages available :
 1. apt-get install python3-pip
 2. pip3 install -r /opt/samba4-gaps/requirements.txt
 
-show log application in syslog
+show log in /var/log/samba4-gaps.log in json format
 
 * If you are having issues with Google Permissions - you might need to add domain-wide authority to your service
   Delegate domain-wide authority to your service account https://developers.google.com/drive/web/delegation#delegate_domain-wide_authority_to_your_service_account
