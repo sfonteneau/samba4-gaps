@@ -94,7 +94,7 @@ def update_password(mail, pwd, sha1hashnt):
     # Create a new service object
     try:
         service = create_directory_service(config.get('google', 'admin_email'))
-    except:
+    except Exception as e:
         logger.error(json.dumps({'status':"error",'msg':str(e),'timestamp': str(datetime.datetime.utcnow())}))
         return
 
