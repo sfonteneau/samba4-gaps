@@ -2,7 +2,6 @@
 domain = yourdomain.com
 replace_domain = false
 dbpath=/opt/samba4-gaps/last_send.db
-attr_password=virtualCryptSHA256
 
 
 [google]
@@ -11,3 +10,6 @@ service_json = /etc/gaps/service.json
 
 [samba]
 basedn = 
+ldap_filter = (&(objectClass=user)(mail=*))
+mail_attribut = mail
+attr_password=virtualCryptSHA256

@@ -58,8 +58,10 @@ if not LastSend.table_exists():
 with open( config.get('google', 'service_json')) as data_file:
   gaConfig = json.load(data_file)
 
-SCOPES = ['https://www.googleapis.com/auth/admin.directory.group',
-        'https://www.googleapis.com/auth/admin.directory.user']
+ldap_filter = config.get('samba', 'ldap_filter')
+mail_attribut = config.get('samba', 'mail_attribut')
+
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.user']
 
 ## Load Google Service ##
 def create_directory_service(user_email):
@@ -123,22 +125,20 @@ def run():
 
     samdb_loc = SamDB(session_info=system_session(),credentials=creds, lp=lp)
 
-    if config.has_section('samba') and config.has_option('samba', 'base'):
-        adbase = config.get('samba', 'base')
+    if config.has_option('samba', 'basedn') and config.get('samba', 'basedn'):
+        adbase = config.get('samba', 'basedn')
     else:
         adbase = samdb_loc.get_default_basedn()
-    if not adbase:
-        adbase = "/etc/samba/smb.conf"
-
 
     testpawd = GetPasswordCommand()
     testpawd.lp = lp
-    passwordattr = config.get('common', 'attr_password')
+    passwordattr = config.get('samba', 'attr_password')
     allmail = {}
 
     # Search all users
-    for user in samdb_loc.search(base=adbase, expression="(&(objectClass=user)(mail=*))", attrs=["mail","sAMAccountName"]):
-        mail = str(user["mail"])
+
+    for user in samdb_loc.search(base=adbase, expression=ldap_filter, attrs=[mail_attribut,"sAMAccountName","pwdLastSet"]):
+        mail = user.get(mail_attribut,[b''])[0].decode('utf-8')
         password = testpawd.get_account_attributes(samdb_loc,None,adbase,filter="(sAMAccountName=%s)" % (str(user["sAMAccountName"])),scope=ldb.SCOPE_SUBTREE,attrs=[passwordattr],decrypt=False)
         if not passwordattr in password:
             continue
