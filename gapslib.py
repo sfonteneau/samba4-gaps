@@ -43,6 +43,9 @@ from peewee import SqliteDatabase,CharField,Model,TextField
 config = configparser.ConfigParser()
 config.read('/etc/gaps/gaps.conf')
 
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
 logfile = config.get('common', 'logfile')
 fhandler = logging.FileHandler(logfile)
 logger.addHandler(fhandler)
@@ -89,7 +92,11 @@ def create_directory_service(user_email):
 
 def update_password(mail, pwd, sha1hashnt):
     # Create a new service object
-    service = create_directory_service(config.get('google', 'admin_email'))
+    try:
+        service = create_directory_service(config.get('google', 'admin_email'))
+    except:
+        logger.error(json.dumps({'status':"error",'msg':str(e),'timestamp': str(datetime.datetime.utcnow())}))
+        return
 
     try:
         user = service.users().get(userKey = mail).execute()
